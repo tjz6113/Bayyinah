@@ -1,5 +1,6 @@
+import asyncio
 import json
-
+from environs import Env
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message
@@ -7,15 +8,11 @@ from ..config import db
 
 user_router = Router()
 
-
-@user_router.message(CommandStart())
-async def user_start(message: Message):
-    await message.reply("Bot started")
 paths_dict = {
-    "01": "NewtoArabic",
+    "01": "NewtoArabic      Done",
     "02": "UnderstandArabic",
-    "0101": "TenDaysChallenge",
-    "0102": "ReadingFluency",
+    "0101": "TenDaysChallenge    Done",
+    "0102": "ReadingFluency     Done",
     "0201": "TheBasics",
     "0202": "TheBasicsandBeyond",
     "020101": "Unit1",
@@ -34,7 +31,7 @@ paths_dict = {
     "020114": "Unit14",
     "020115": "Unit15",
     "020201": "Dream",
-    "020202": "ReadingTheClassics",
+    "020202": "ReadingTheClassics       Done",
     "02020101": "BasicNahw",
     "02020102": "BasicSarf",
     "02020103": "AdvancedSarf",
@@ -43,6 +40,51 @@ paths_dict = {
     "02020106": "BaqarahBeyondTranslation",
     "02020107": "DreamBIG2023"
 }
+
+
+
+
+
+@user_router.message(F.from_user.id == 6625091538, CommandStart())
+async def ochopat_start(message: Message):
+    await message.reply("Ochopat na gap")
+    await asyncio.sleep(5)
+    await message.answer("bilaman gulib o'tiribsiz")
+    await asyncio.sleep(5)
+    await message.answer("yaxshi go'raman sizni ochopat")
+    await asyncio.sleep(5)
+    await message.answer("siza bir gappim bor")
+    await asyncio.sleep(6)
+    await message.answer("seryozniy lekin")
+    await asyncio.sleep(6)
+    await message.answer("dim qatti seryozniy")
+    await asyncio.sleep(9)
+    await message.answer("sizni dim qatti yaxshi go'raman. xafa bo'lmang lekin")
+    await asyncio.sleep(5)
+    await message.answer("Xafa bo'lmang yaxshimi?")
+    await asyncio.sleep(3)
+    await message.answer("Vada baring")
+    await asyncio.sleep(15)
+    await message.answer("manga turmusha chiqasmi?")
+    # await asyncio.sleep(15)
+
+
+
+@user_router.message(F.from_user.id == 6625091538)
+async def forwardingmessage(message: Message):
+    await message.forward(chat_id='6393999936', message_thread_id=message.message_thread_id)
+
+@user_router.message(F.from_user.id == 6393999936)
+async def forwardingmessage(message: Message):
+    await message.forward(chat_id='6625091538', message_thread_id=message.message_thread_id)
+
+
+# @user_router.message(CommandStart(), F.chat.id == ochopatID )
+# async def user_start(message: Message):
+#     await message.reply("Ochopat na gap")
+#
+#
+
 
 @user_router.message(F.document.mime_type == "video/mp2t")
 async def video_handler(message: Message):
@@ -63,58 +105,7 @@ video - {VideoID}\n
     db.add_video(path=path, VideoID=VideoID, TFileID=TFileID)
 
 
-
 @user_router.message(F.document)
 async def file_handler(message: Message):
     data_message = message.dict()
     print(json.dumps(data_message, default=str))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#
-#     filename = message.document.file_name
-#     fullID = filename.split(sep='#')[0]
-#     parts = fullID.split('_')
-#     folder = parts[0]
-#     parts = parts[1].split('@')
-#     video = parts[0]
-#     file = parts[1]
-#
-#     db.create_table_files(pathID=folder)
-#     db.add_file(video, file, message.document.file_id, folder)
-#
-#
-#     text = f"""
-# folder - {folder}\n
-# video - {video}\n
-# file - {file}
-# """
-#     await message.reply(text)

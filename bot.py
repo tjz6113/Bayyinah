@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+import aiohttp
 import betterlogging as bl
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -105,6 +106,7 @@ async def main():
     storage = get_storage(config)
 
     bot = Bot(token=config.tg_bot.token, parse_mode="HTML")
+
     dp = Dispatcher(storage=storage)
 
     dp.include_routers(*routers_list)
