@@ -8,6 +8,7 @@ aiogram = "==3.0.0"
 environs = "~=9.0"
 redis = "*"
 betterlogging = "*"
+aiohttp = "*"
 
 [dev-packages]
 

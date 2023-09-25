@@ -13,9 +13,11 @@ paths_dict_rev = {"New to Arabic": "01", "Understand Arabic": "02", "10 Days Cha
                   "Advanced Nahw & Structures": "02020104", "Balagha": "02020105", "Baqarah Beyond Translation": "02020106",
                   "Dream BIG 2023": "02020107"}
 
+
+
 kb_dict = {'00': ['01', '02'],
            '01': ['0101', '0102'],
-           '02': ['0201', '0202', '02010'],
+           '02': ['0201', '0202'],
            '0101': ['010101', '010102'],
            '0102': ['010201', '010202'],
            '010201': ['01020101', '01020102', '01020103', '01020104', '01020105', '01020106', '01020107', '01020108',
@@ -27,7 +29,6 @@ kb_dict = {'00': ['01', '02'],
                     '020111', '020112', '020113', '020114', '020115', '020116', '020117', '020118', '020119', '020120',
                     '020121', '020122', '020123'],
            '0202': ['020201', '020202'],
-           '02010': ['020102', '020103', '020104', '020105', '020106', '020107', '020108', '020109'],
            '020201': ['020201001', '020201002', '020201003', '020201004', '020201005', '020201006', '020201007',
                       '020201008', '020201009', '020201010', '020201011', '020201012', '020201013', '020201014',
                       '020201015', '020201016', '020201017', '020201018', '020201019', '020201020', '020201021',
@@ -437,20 +438,22 @@ CREATE TABLE IF NOT EXISTS 'file'(
         return self.execute(sql, fetchall=True)
 
     def select_videos(self, **kwargs):
-        sql = "SELECT * FROM video WHERE "
+        sql = "SELECT fileID, filename FROM video WHERE "
         sql, parameters = self.format_args(sql, kwargs)
         return self.execute(sql, parameters=parameters, fetchall=True)
 
     def select_videos_for_kb(self, **kwargs):
-        sql = "SELECT id, filename FROM video WHERE "
         sql2 = 'ORDER BY id'
+        sql = "SELECT id, filename FROM video WHERE "
         sql, parameters = self.format_args(sql, kwargs)
         sql = sql +' '+ sql2
         return self.execute(sql, parameters=parameters, fetchall=True)
 
     def select_files(self, **kwargs):
-        sql = f"SELECT * FROM file WHERE "
+        sql2 = 'ORDER BY id'
+        sql = f"SELECT filename, fileID FROM file WHERE "
         sql, parameters = self.format_args(sql, kwargs)
+        sql = sql +' '+ sql2
         return self.execute(sql, parameters=parameters, fetchall=True)
 
     def count_videos(self, **kwargs):
@@ -647,7 +650,7 @@ def load_config(path: str = None) -> Config:
     """
     This function takes an optional file path as input and returns a Config object.
     :param path: The path of env file from where to load the configuration variables.
-    It reads environment variables from a .env file if provided, else from the process environment.
+    It reads environment variables from a .env.ex file if provided, else from the process environment.
     :return: Config object with attributes set as per environment variables.
     """
 

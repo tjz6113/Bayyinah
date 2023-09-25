@@ -102,7 +102,7 @@ async def main():
 
 
 
-    config = load_config(".env")
+    config = load_config(".env.ex")
     storage = get_storage(config)
 
     bot = Bot(token=config.tg_bot.token, parse_mode="HTML")
