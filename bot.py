@@ -13,7 +13,7 @@ from tgbot.handlers import routers_list
 from tgbot.middlewares.config import ConfigMiddleware
 from tgbot.services import broadcaster
 
-from tgbot import db_commands as dbase
+from tgbot.config import db
 
 
 async def on_startup(bot: Bot, admin_ids: list[int]):
@@ -100,7 +100,10 @@ def get_storage(config):
 async def main():
     setup_logging()
 
+    db.create_table_videos()
+    db.create_table_files()
 
+    session = AiohttpSession(proxy="http://proxy.server:3128")
 
     config = load_config(".env.ex")
     storage = get_storage(config)

@@ -1,6 +1,5 @@
-import asyncio
 import json
-from environs import Env
+
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message
@@ -8,104 +7,89 @@ from ..config import db
 
 user_router = Router()
 
+
+@user_router.message(CommandStart())
+async def user_start(message: Message):
+    await message.reply("Bot started")
 paths_dict = {
-    "01": "NewtoArabic      Done",
-    "02": "UnderstandArabic",
-    "0101": "TenDaysChallenge    Done",
-    "0102": "ReadingFluency     Done",
-    "0201": "TheBasics",
-    "0202": "TheBasicsandBeyond",
-    "020101": "Unit1",
-    "020102": "Unit2",
-    "020103": "Unit3",
-    "020104": "Unit4",
-    "020105": "Unit5",
-    "020106": "Unit6",
-    "020107": "Unit7",
-    "020108": "Unit8",
-    "020109": "Unit9",
-    "020110": "Unit10",
-    "020111": "Unit11",
-    "020112": "Unit12",
-    "020113": "Unit13",
-    "020114": "Unit14",
-    "020115": "Unit15",
-    "020201": "Dream",
-    "020202": "ReadingTheClassics       Done",
-    "02020101": "BasicNahw",
-    "02020102": "BasicSarf",
-    "02020103": "AdvancedSarf",
-    "02020104": "AdvancedNahw&Structures",
-    "02020105": "Balagha",
-    "02020106": "BaqarahBeyondTranslation",
-    "02020107": "DreamBIG2023"
+    "0101": "NewToArabic",
+    "0102": "UnderstandArabic",
+    "010101": "TenDaysChallenge",
+    "010102": "ReadingFluency",
+    "010201": "TheBasics",
+    "010202": "TheBasicsandBeyond",
+    "01020101": "UnitOne",
+    "01020102": "UnitTwo",
+    "01020103": "UnitThree",
+    "01020104": "UnitFour",
+    "01020105": "UnitFive",
+    "01020106": "UnitSix",
+    "01020107": "UnitSeven",
+    "01020108": "UnitEight",
+    "01020109": "UnitNine",
+    "01020110": "UnitTen",
+    "01020111": "UnitEleven",
+    "01020112": "UnitTwelve",
+    "01020113": "UnitThirteen",
+    "01020114": "UnitFourteen",
+    "01020115": "UnitFifteen",
+    "01020201": "Dream",
+    "01020202": "ReadingTheClassics",
+    "0102020101": "BasicNahw",
+    "0102020102": "BasicSarf",
+    "0102020103": "AdvancedSarf",
+    "0102020104": "AdvancedNahwAndStructures",
+    "0102020105": "Balagha",
+    "0102020106": "BaqarahBeyondTranslation",
+    "0102020107": "DreamBIGTwentyTwentyThree"
 }
-
-
-
-
-
-@user_router.message(F.from_user.id == 6625091538, CommandStart())
-async def ochopat_start(message: Message):
-    await message.reply("Ochopat na gap")
-    await asyncio.sleep(5)
-    await message.answer("bilaman gulib o'tiribsiz")
-    await asyncio.sleep(5)
-    await message.answer("yaxshi go'raman sizni ochopat")
-    await asyncio.sleep(5)
-    await message.answer("siza bir gappim bor")
-    await asyncio.sleep(6)
-    await message.answer("seryozniy lekin")
-    await asyncio.sleep(6)
-    await message.answer("dim qatti seryozniy")
-    await asyncio.sleep(9)
-    await message.answer("sizni dim qatti yaxshi go'raman. xafa bo'lmang lekin")
-    await asyncio.sleep(5)
-    await message.answer("Xafa bo'lmang yaxshimi?")
-    await asyncio.sleep(3)
-    await message.answer("Vada baring")
-    await asyncio.sleep(15)
-    await message.answer("manga turmusha chiqasmi?")
-    # await asyncio.sleep(15)
-
-
-
-@user_router.message(F.from_user.id == 6625091538)
-async def forwardingmessage(message: Message):
-    await message.forward(chat_id='6393999936', message_thread_id=message.message_thread_id)
-
-@user_router.message(F.from_user.id == 6393999936)
-async def forwardingmessage(message: Message):
-    await message.forward(chat_id='6625091538', message_thread_id=message.message_thread_id)
-
-
-# @user_router.message(CommandStart(), F.chat.id == ochopatID )
-# async def user_start(message: Message):
-#     await message.reply("Ochopat na gap")
-#
-#
-
-
+@user_router.message(F.document.mime_type == "video/mp2ts")
 @user_router.message(F.document.mime_type == "video/mp2t")
 async def video_handler(message: Message):
-    TFileID = message.document.file_id
-    ID = message.document.file_name.split(sep='#')[0]
-    items = ID.split(sep='.')
-    pathID = items[0]
-    VideoID = items[1]
-    path = paths_dict[pathID]
-    print(path)
+    fileID = message.document.file_id
+    full_name = message.document.file_name.split(sep='#')
+    filename = full_name[1][1:300]
+    fullID = full_name[0]
+    if fullID.__contains__('_'):
+        items = fullID.split(sep='_')
+    else:
+        items = fullID.split(sep='.')
+    folder = items[0]
+    video = items[1]
+    id = f"{folder}{video}"
+    path = paths_dict[folder]
     text = f"""
-folder - {path}\n
-video - {VideoID}\n
+id - {id}
+folder - {path}
+video - {video}
+filename - {filename}
 """
     await message.reply(text)
+    db.add_video(id=id, folder=folder, video=video, filename=filename, fileID=fileID)
 
-    db.create_table_videos(path)
-    db.add_video(path=path, VideoID=VideoID, TFileID=TFileID)
 
 
 @user_router.message(F.document)
 async def file_handler(message: Message):
-    data_message = message.dict()
-    print(json.dumps(data_message, default=str))
+    fileID = message.document.file_id
+    full_name = message.document.file_name.split(sep='#')
+    filename = full_name[1][1:300]
+    fullID = full_name[0]
+    if fullID.__contains__('_'):
+        items = fullID.split(sep='_')
+    else:
+        items = fullID.split(sep='.')
+    folder = items[0]
+    video = items[1].split(sep='@')[0]
+    file = items[1].split(sep='@')[1]
+    id = f"{folder}{video}{file}"
+    path = paths_dict[folder]
+    text = f"""
+id - {id}
+folder - {path}
+video - {video}
+file - {file}
+filename - {filename}
+"""
+    await message.reply(text)
+    db.add_file(id=id, video=video, filename=filename, fileID=fileID)
