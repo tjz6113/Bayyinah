@@ -22,6 +22,57 @@ from ..config import db
 admin_router = Router()
 admin_router.message.filter(AdminFilter())
 
+@admin_router.message(F.document.mime_type == "video/mp2ts")
+@admin_router.message(F.document.mime_type == "video/mp2t")
+async def video_handler(message: Message):
+    fileID = message.document.file_id
+    full_name = message.document.file_name.split(sep='#')
+    filename = full_name[1][1:300]
+    fullID = full_name[0]
+    if fullID.__contains__('_'):
+        items = fullID.split(sep='_')
+    else:
+        items = fullID.split(sep='.')
+    folder = items[0]
+    video = items[1]
+    id = f"{folder}{video}"
+    path = paths_dict[folder]
+    text = f"""
+id - {id}
+folder - {path}
+video - {video}
+filename - {filename}
+"""
+    await message.reply(text)
+    db.add_video(id=id, folder=folder, video=video, filename=filename, fileID=fileID)
+
+
+
+@admin_router.message(F.document)
+async def file_handler(message: Message):
+    fileID = message.document.file_id
+    full_name = message.document.file_name.split(sep='#')
+    filename = full_name[1][1:300]
+    fullID = full_name[0]
+    if fullID.__contains__('_'):
+        items = fullID.split(sep='_')
+    else:
+        items = fullID.split(sep='.')
+    folder = items[0]
+    video = items[1].split(sep='@')[0]
+    file = items[1].split(sep='@')[1]
+    id = f"{folder}{video}{file}"
+    path = paths_dict[folder]
+    text = f"""
+id - {id}
+folder - {path}
+video - {video}
+file - {file}
+filename - {filename}
+"""
+    await message.reply(text)
+    db.add_file(id=id, video=video, filename=filename, fileID=fileID)
+
 
 # start function
 @admin_router.message(CommandStart())
