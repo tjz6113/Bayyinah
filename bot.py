@@ -7,7 +7,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram.methods.set_my_commands import SetMyCommands
-
+from aiogram.client.session.aiohttp import AiohttpSession
 from tgbot.config import load_config, Config
 from tgbot.handlers import routers_list
 from tgbot.middlewares.config import ConfigMiddleware
@@ -103,9 +103,9 @@ async def main():
     db.create_table_videos()
     db.create_table_files()
 
-    session = AiohttpSession(proxy="http://proxy.server:3128")
+    # session = AiohttpSession(proxy="http://proxy.server:3128")
 
-    config = load_config(".env.ex")
+    config = load_config(".env")
     storage = get_storage(config)
 
     bot = Bot(token=config.tg_bot.token, parse_mode="HTML")

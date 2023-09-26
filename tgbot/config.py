@@ -650,7 +650,7 @@ def load_config(path: str = None) -> Config:
     """
     This function takes an optional file path as input and returns a Config object.
     :param path: The path of env file from where to load the configuration variables.
-    It reads environment variables from a .env.ex file if provided, else from the process environment.
+    It reads environment variables from a .env file if provided, else from the process environment.
     :return: Config object with attributes set as per environment variables.
     """
 

@@ -1,13 +1,11 @@
 # importing libraries
 from aiogram import Router, F
-from aiogram.filters import CommandStart, StateFilter
+from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, callback_query
-from aiogram.methods.send_video import SendVideo
-from aiogram.methods.send_document import SendDocument
 
 # importing dictionaries
-from tgbot.config import kb_dict, paths_dict
+from tgbot.config import paths_dict
 # importing filters
 from tgbot.filters.admin import AdminFilter
 
@@ -24,8 +22,6 @@ from ..config import db
 admin_router = Router()
 admin_router.message.filter(AdminFilter())
 
-state_any = StateFilter('*')
-
 
 # start function
 @admin_router.message(CommandStart())
@@ -35,41 +31,107 @@ async def admin_start(message: Message, state: FSMContext):
     await message.reply("From which one, would you like to start with?",
                         reply_markup=await create_kb(folder='00', start=0))
 
+
+@admin_router.callback_query(F.data.in_({'previous-video', 'next-video'}))
+async def after_video_handle(call: callback_query.CallbackQuery, state: FSMContext):
+    current_video_index = -1000
+    # assigning values
+    cb = call.data
+    data = await state.get_data()
+    current_video = data['current-video']
+    ids = data['videos-ids']
+    first = False
+    last = False
+
+    # finding the index of the current video. it helps to locate the id of the other videos
+    for index, value in enumerate(ids):
+        if value == current_video:
+            current_video_index = index
+
+    if ids[0] == current_video:
+        first = True
+    elif ids[-1] == current_video:
+        last = True
+
+    # taking action based the callback
+    if cb == 'back-to-videos-list':
+        await backToPreviousFolder(call, state)
+    else:
+        if cb == 'previous-video':
+            current_video = ids[current_video_index - 1]
+        elif cb == 'next-video':
+            current_video = ids[current_video_index + 1]
+        await send_videos(cb=current_video, state=state, call=call, first=first, last=last)
+    await state.update_data({'current-video': current_video})
+
+
 @admin_router.callback_query(F.data == '00')
 async def main_menu(call: callback_query.CallbackQuery, state: FSMContext):
     await call.message.delete()
     await state.set_state(states.choosing_folder)
     await state.update_data({'indicators': []})
     await call.message.answer("From which one, would you like to start with?",
-                        reply_markup=await create_kb(folder='00', start=0))
+                              reply_markup=await create_kb(folder='00', start=0))
+
 
 # callback function for going back and forth on the list of folders
 @admin_router.callback_query(states.choosing_folder, F.data == 'next')
 @admin_router.callback_query(states.choosing_folder, F.data == 'previous')
 async def kb_swapping(call: callback_query.CallbackQuery, state: FSMContext):
-    print("kb_swapping called")
     # deciding what to do based the callback data
     data = await state.get_data()
     await call.message.delete()
-    if call.data == 'next':
-        start = data['start'] + 20
+
+    if call.data == 'back-to-videos-list':
+        start = data['start']
     else:
-        start = data['start'] - 20
+        if call.data == 'next':
+            start = data['start'] + 20
+        elif call.data == 'previous':
+            start = data['start'] - 20
+
+        await state.update_data({'start': start})
 
     # getting folder id
     folder = data['chosen-folder']
-    previous_folder = data['previous-folder']
     # sending message to the user with folder as inline keyboard
-    await call.message.answer(text="Choose one below", reply_markup=await create_kb(folder=folder, start=start, previous_folder=previous_folder))
+    await call.message.answer(text="Choose one below", reply_markup=await create_kb(folder=folder, start=start))
+
+
+@admin_router.callback_query(F.data == 'previous-folder')
+async def backToPreviousFolder(call: callback_query.CallbackQuery, state: FSMContext):
+    await call.message.delete()
+    await state.set_state(states.choosing_folder)
+    # assigning the values
+    indicator_line = ''
+    data = await state.get_data()
+    previous_folder = data['previous-folder']
+    indicators = data['indicators']
+
+    # popping out unnecessary data
+    cb = previous_folder.pop(-1)
+    current_folder = indicators.pop(-1)
+    current_folder = indicators[-1] + "\n"  # twice is needed for cutting out unnecessary one and get the needed one
+    try:  # building path line
+        for value in previous_folder:
+            indicator_line = indicator_line + paths_dict[value] + " > "
+    except:
+        pass
+    # sending the message with details
+    text = (
+        f"<strong><em>{indicator_line}</em></strong>\n\nCurrently showing folders in <strong>{current_folder}</strong>\nChoose one below")
+    await call.message.answer(text, reply_markup=await create_kb(folder=cb, start=0))
+    await state.update_data({'start': 0, 'chosen-folder': cb, "previous-folder": previous_folder})
 
 
 # callback function for getting data about requested folder and videos within it
 @admin_router.callback_query(states.choosing_folder)
 async def get_next_buttons(call: callback_query.CallbackQuery, state: FSMContext):
-    print("get_next_buttons called")
+
     # assigning the values
     indicator_line = ''
     cb = call.data
+    previous_folder = []
     data = await state.get_data()
     indicators = data['indicators']
     # deleting previous message     
@@ -85,16 +147,19 @@ async def get_next_buttons(call: callback_query.CallbackQuery, state: FSMContext
     # getting info about the current folder the user in
     current_folder = paths_dict[str(cb)] + "\n"
     try:
-        previous_folder = data['chosen-folder']
-    except KeyError:
-        previous_folder = None
+        previous_folder = data['previous-folder']
+    except:
+        pass
+    try:
+        previous_folder.append(data['chosen-folder'])
+    except:
         pass
     # handling the callback data with try except method. Without error, the try part will send the folders
     # in the requested folder
     try:
-        text = f"<strong><em>{indicator_line}</em></strong>\n\n<strong>{current_folder}</strong>\nChoose one below"
-        await call.message.answer(text, reply_markup=await create_kb(folder=cb, start=0, previous_folder=previous_folder))
-        await state.update_data({'start': 0, 'chosen-folder': cb, "previous-folder": previous_folder})
+        text = f"<strong><em>{indicator_line}</em></strong>\n\nCurrently showing folders in <strong>{current_folder}</strong>\nChoose one below"
+        await call.message.answer(text, reply_markup=await create_kb(folder=cb, start=0))
+        await state.update_data({'start': 0, 'chosen-folder': cb})
     # except part will send the videos inside the folder
     except KeyError:
         # changing the state 
@@ -121,21 +186,20 @@ async def get_next_buttons(call: callback_query.CallbackQuery, state: FSMContext
             'videos-filenames': filenames,
             'videos-count': count
         })
-        print(await state.get_data())
         # making the text and sending a message with inline keyboard
-        text = f"<strong><em>{indicator_line}</em></strong>\n\nShowing videos in <strong>{current_folder}</strong> below"
+        text = f"<strong><em>{indicator_line}</em></strong>\n\nCurrently showing videos in <strong>{current_folder}</strong>\nChoose one below"
         await call.message.answer(text=text, reply_markup=await create_kb(start=start, count=count, id_arr=ids,
-                                                                          filenames=filenames, previous_folder=previous_folder))
+                                                                          filenames=filenames))
 
     # storing values in FSMContext
     indicators.append(paths_dict[cb])
-    await state.update_data({'indicators': indicators})
+    await state.update_data({'indicators': indicators, "previous-folder": previous_folder})
 
 
 # handling callbacks from videos keyboard
 @admin_router.callback_query(states.showing_videos)
-async def send_videos(call: callback_query.CallbackQuery, state: FSMContext):
-    print("send_videos called")
+@admin_router.callback_query(states.sending_videos, F.data == 'back-to-videos-list')
+async def videos_page(call: callback_query.CallbackQuery, state: FSMContext):
     #  assigning values
     cb = call.data
     data = await state.get_data()
@@ -144,54 +208,71 @@ async def send_videos(call: callback_query.CallbackQuery, state: FSMContext):
     ids = data['videos-ids']
     filenames = data['videos-filenames']
     current_folder = data['videos-folder']
-    previous_folder = data['previous-folder']
-    print(previous_folder)
+    await state.update_data({'current-video': cb})
+    first = False
+    last = False
 
     await call.message.delete()
+
+    text = f"Videos in {paths_dict[current_folder]} below"
     # checking the callback data and taking action accordingly
-    if cb == "previous-videos":
-        start = start - 10
-        await call.message.answer(text=f"Videos in {paths_dict[current_folder]} below",
-                                  reply_markup=await create_kb(start=start, count=count, id_arr=ids,
-                                                               filenames=filenames, previous_folder=previous_folder))
-    elif cb == "next-videos":
-        start = start + 10
-        await call.message.answer(text=f"Videos in {paths_dict[current_folder]} below",
-                                  reply_markup=await create_kb(start=start, count=count, id_arr=ids,
-                                                               filenames=filenames, previous_folder=previous_folder))
-    elif cb == 'ListNames':
+    if cb == 'ListNames':
         text = ''
         for name in filenames:
             text = text + name + "\n"
-        await call.message.answer(text=text, reply_markup=await create_kb(start=start, count=count, id_arr=ids,
-                                                                          filenames=filenames, previous_folder=previous_folder))
+        await call.message.answer(text=text,
+                                  reply_markup=await create_kb(start=start, count=count, id_arr=ids,
+                                                               filenames=filenames))
+
+    elif cb == "previous-videos":
+        start = start - 10
+        await call.message.answer(text=text,
+                                  reply_markup=await create_kb(start=start, count=count, id_arr=ids,
+                                                               filenames=filenames))
+    elif cb == "next-videos":
+        start = start + 10
+        await call.message.answer(text=text,
+                                  reply_markup=await create_kb(start=start, count=count, id_arr=ids,
+                                                               filenames=filenames))
+
+    elif cb == 'back-to-videos-list':
+        await state.set_state(states.showing_videos)
+        await call.message.answer(text=text,
+                                  reply_markup=await create_kb(start=start, count=count, id_arr=ids,
+                                                               filenames=filenames))
+
     else:
         # now the callback coming is the id for the video.
         # todo. get the file id for both video and file if exits
         # todo. send the video and file to the user with inline buttons asking for next or previous video or back,
         #  or main menu
         # todo. handle the callbacks inside this function
+        if ids[0] == cb:
+            first = True
+        elif ids[-1] == cb:
+            last = True
+        await send_videos(cb=cb, state=state, call=call, first=first, last=last)
 
-        # changing the state
-        await state.set_state(states.sending_videos)
 
-        # assigning default values
-        filenames, fileID = [], []
+async def send_videos(cb, state, call, first, last):
+    # changing the state
+    await state.set_state(states.sending_videos)
 
-        # getting the values from database
-        video_item = db.select_videos(id=cb)[0]
-        videoID = video_item[0]
-        video_name = video_item[1]
-        result = db.select_files(video=cb)
+    # getting the values from database
+    video_item = db.select_videos(id=cb)[0]
+    videoID = video_item[0]
+    video_name = video_item[1]
+    result = db.select_files(video=cb)
 
-        # sending video
-        await call.message.answer_video(video=videoID, caption=video_name)
+    # sending video
+    await call.message.answer_video(video=videoID, caption=video_name)
 
-        # sending files
-        for value in result:
-            filename = (value[0])
-            fileID = (value[1])
-            await call.message.answer_document(caption=filename, document=fileID)
+    # sending files
+    for value in result:
+        filename = (value[0])
+        fileID = (value[1])
+        await call.message.answer_document(caption=filename, document=fileID)
 
-        # sending message with a keyboard
-        await call.message.answer(text="Choose the action", reply_markup=await after_video_kb())
+    # sending message with a keyboard
+    await call.message.answer(text="Choose the action", reply_markup=await after_video_kb(first, last))
+    await state.update_data({"sent-video": cb})
