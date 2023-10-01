@@ -1,8 +1,9 @@
 # importing libraries
 from aiogram import Router, F
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, callback_query
+import asyncio
 
 # importing dictionaries
 from tgbot.config import paths_dict
@@ -21,6 +22,25 @@ from ..config import db
 # assigning the routers
 admin_router = Router()
 admin_router.message.filter(AdminFilter())
+
+
+
+
+@admin_router.message(Command("send_all"))
+async def send_all(message: Message):
+    results = db.get_all_videos()
+
+    for result in results:
+        await message.answer_video(video=result[0], disable_notification=True)
+        asyncio.sleep(0.05)
+    
+    results = db.get_all_files()
+
+    for result in results:
+        await message.answer_document(document=result[0], disable_notification=True)
+        asyncio.sleep(0.05)
+    
+
 
 @admin_router.message(F.document.mime_type == "video/mp2ts")
 @admin_router.message(F.document.mime_type == "video/mp2t")
@@ -83,6 +103,8 @@ async def admin_start(message: Message, state: FSMContext):
                         reply_markup=await create_kb(folder='00', start=0))
 
 
+
+
 @admin_router.callback_query(F.data.in_({'previous-video', 'next-video'}))
 async def after_video_handle(call: callback_query.CallbackQuery, state: FSMContext):
     current_video_index = -1000
@@ -99,10 +121,6 @@ async def after_video_handle(call: callback_query.CallbackQuery, state: FSMConte
         if value == current_video:
             current_video_index = index
 
-    if ids[0] == current_video:
-        first = True
-    elif ids[-1] == current_video:
-        last = True
 
     # taking action based the callback
     if cb == 'back-to-videos-list':
@@ -110,8 +128,14 @@ async def after_video_handle(call: callback_query.CallbackQuery, state: FSMConte
     else:
         if cb == 'previous-video':
             current_video = ids[current_video_index - 1]
+            if current_video_index == 1:
+                first = True  
         elif cb == 'next-video':
             current_video = ids[current_video_index + 1]
+            
+            if current_video_index +2 == len(ids):
+                last = True
+
         await send_videos(cb=current_video, state=state, call=call, first=first, last=last)
     await state.update_data({'current-video': current_video})
 

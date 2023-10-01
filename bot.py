@@ -23,6 +23,7 @@ async def on_startup(bot: Bot, admin_ids: list[int]):
         {"command": "help", "description": "Get help"},
         {"command": "database", "description": "Start writing to database"},
         {"command": "stop", "description": "stop the bot"},
+        {"command": "send_all", "description": "Send all the files and videos in database"}
 
         # Add more commands as needed
     ]

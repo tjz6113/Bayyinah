@@ -96,15 +96,18 @@ async def create_kb(start, folder=None, count=None, id_arr=None, filenames=None,
         return builder.as_markup()
 
 
-async def after_video_kb(prev: bool, next: bool):
+async def after_video_kb(first, last):
     # building keyboard
     builder = InlineKeyboardBuilder()
+    another_builder = InlineKeyboardBuilder()
 
     # creating buttons
-    builder.button(text='Previous', callback_data="previous-video")
-    builder.button(text='Next', callback_data='next-video')
-    builder.button(text='Back🔙', callback_data='back-to-videos-list')
-    builder.button(text='Main Menu🏠', callback_data='00')
-    builder.adjust(2, 2)
+    if not first:
+        builder.button(text='Previous', callback_data="previous-video")
+    if not last:
+        builder.button(text='Next', callback_data='next-video')
+    another_builder.button(text='Back🔙', callback_data='back-to-videos-list')
+    another_builder.button(text='Main Menu🏠', callback_data='00')
+    builder.attach(another_builder)
 
     return builder.as_markup()
